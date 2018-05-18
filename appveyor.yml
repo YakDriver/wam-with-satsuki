@@ -1,0 +1,107 @@
+# Notes:
+#   - Minimal appveyor.yml file is an empty file. All sections are optional.
+#   - Indent each level of configuration with 2 spaces. Do not use tabs!
+#   - All section names are case-sensitive.
+#   - Section names should be unique on each level.
+
+#---------------------------------#
+#      general configuration      #
+#---------------------------------#
+
+# you can use {branch} name in version format too
+# version: 1.0.{build}-{branch}
+
+# branches to build
+branches:
+  # whitelist
+  only:
+    - master
+
+# Do not build on tags (GitHub and BitBucket)
+# skip_tags: true
+
+# Start builds on tags only (GitHub and BitBucket)
+# skip_non_tags: true
+
+# Do not build feature branch with open Pull Requests
+skip_branch_with_pr: true
+build: off
+# Maximum number of concurrent jobs for the project
+max_jobs: 1
+
+#---------------------------------#
+#    environment configuration    #
+#---------------------------------#
+
+# Build worker image (VM template)
+image: Visual Studio 2013
+
+# set clone depth
+clone_depth: 5                      # clone entire repository history if not defined
+
+# environment variables
+environment:
+  APPVEYOR_CACHE_SKIP_RESTORE: true
+  SATS_TOKEN:
+    secure: TIVvRGaK8BBVGqfMcwFZjOisHY/Rq2Fu+FnLHpkkhF7rqNFTLMINXMBSmmkAEy2y
+
+# scripts that run after cloning repository
+install:
+  - git submodule update --init --recursive
+  - mkdir C:\venv
+  - C:\Python36-x64\Scripts\virtualenv C:\venv
+  - C:\venv\Scripts\activate
+  - SET
+  - python --version
+  - pip install --upgrade tox setuptools virtualenv wheel
+  # remove next line when not using test.pypi for gravitybee
+  #- pip install click distlib setuptools pyinstaller pyppyn
+  #- pip install --index-url https://test.pypi.org/simple/ gravitybee
+  - pip install gravitybee satsuki
+  # remove next line when not using test.pypi for gravitybee
+  #- pip install click	pygithub
+  #- pip install --index-url https://test.pypi.org/simple/ satsuki
+  - pip install --editable .
+  - ps: ls C:\venv\Scripts
+  - virtualenv --version
+  - pip --version
+  - tox --version
+
+#---------------------------------#
+#       build configuration       #
+#---------------------------------#
+
+# build platform, i.e. x86, x64, Any CPU. This setting is optional.
+platform: Any CPU
+
+# to add several platforms to build matrix:
+#platform:
+#  - x86
+#  - Any CPU
+
+# build Configuration, i.e. Debug, Release, etc.
+configuration: Release
+
+# to add several configurations to build matrix:
+#configuration:
+#  - Debug
+#  - Release
+
+# scripts to run before deployment
+before_deploy:
+  #- gravitybee --src-dir src --extra-data static --script C:\venv\Scripts\wam-script.py --verbose
+  - gravitybee --src-dir src --extra-data static --verbose
+  - ps: ls
+  - set SATS_TAG=$gb_pkg_ver
+  - set SATS_BODY=* [$gb_pkg_name v$gb_pkg_ver CHANGELOG](https://github.com/plus3it/$gb_pkg_name_lower/blob/$gb_pkg_ver/CHANGELOG.md) (Win)
+  - set SATS_REL_NAME=Release v$gb_pkg_ver
+  - echo %SATS_TAG%
+  - echo %SATS_BODY%
+  - echo %SATS_REL_NAME%
+  - satsuki --verbose
+
+# to run your custom scripts instead of provider deployments...
+deploy_script:
+  - echo "Did it deploy?"
+
+
